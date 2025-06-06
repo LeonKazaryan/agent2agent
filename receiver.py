@@ -1,45 +1,45 @@
-import spade
-from spade.agent import Agent
-from spade.behaviour import CyclicBehaviour
-from spade.message import Message
-import asyncio
+from autogen import AssistantAgent, UserProxyAgent
+import json
+import time
 
-class ReceiverAgent(Agent):
-    class ReceiveNumber(CyclicBehaviour):
-        async def on_start(self):
-            self.numbers = []
+# Агент, который анализирует числа
+receiver = AssistantAgent(
+    name="ReceiverAgent",
+    system_message="Ты агент, который получает числа из файла agent_exchange.json, считает среднее и даёт рекомендацию ('побольше' или 'поменьше', если среднее < 5). Записывай ответ в тот же файл."
+)
 
-        async def run(self):
-            msg = await self.receive(timeout=10)
-            if msg:
-                number = int(msg.body)
-                print(f"Агент 2 получил число: {number}")
-                self.numbers.append(number)
+# Прокси-агент для взаимодействия с файлом
+user_proxy = UserProxyAgent(
+    name="UserProxy",
+    code_execution_config={"use_docker": False}
+)
 
-                # Считаем среднее
-                if len(self.numbers) > 0:
-                    average = sum(self.numbers) / len(self.numbers)
-                    print(f"Среднее значение: {average}")
+numbers = []  # Список для хранения всех чисел
 
-                    # Даём рекомендацию
-                    recommendation = "побольше" if average < 5 else "поменьше"
-                    reply = Message(to=str(msg.sender))
-                    reply.body = recommendation
-                    await self.send(reply)
-                    print(f"Агент 2 отправил рекомендацию: {recommendation}")
-            else:
-                print("Агент 2 не получил число за 10 секунд")
+def read_and_process():
+    global numbers
+    while True:
+        try:
+            with open("agent_exchange.json", "r") as f:
+                data = json.load(f)
+            if data.get("to") == "receiver" and "number" in data:
+                number = data["number"]
+                numbers.append(number)  # Сохраняем число
+                average = sum(numbers) / len(numbers)
+                recommendation = "побольше" if average < 5 else "поменьше"
+                # Даём SenderAgent время прочитать файл перед перезаписью
+                time.sleep(0.5)
+                reply = {"to": "sender", "recommendation": recommendation}
+                with open("agent_exchange.json", "w") as f:
+                    json.dump(reply, f)
+                print(f"Агент 2 (AutoGen) получил число: {number}, среднее: {average}, рекомендация: {recommendation}")
+        except FileNotFoundError:
+            pass
+        time.sleep(2)
 
-    async def setup(self):
-        print("Агент 2 запущен")
-        b = self.ReceiveNumber()
-        self.add_behaviour(b)  
-
-async def main():
-    agent = ReceiverAgent("receiver@jabber.hot-chilli.net", "password")
-    await agent.start()
-    await asyncio.sleep(15)  
-    await agent.stop()
-
+# Запускаем обработку
 if __name__ == "__main__":
-    asyncio.run(main())
+    import threading
+    threading.Thread(target=read_and_process, daemon=True).start()
+    user_proxy.initiate_chat(receiver, message="Начни обработку")
+    input("Нажми Enter для завершения...")
