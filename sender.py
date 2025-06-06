@@ -13,14 +13,14 @@ class SenderAgent(Agent):
             self.current_number = random.randint(1, 10)
 
         async def run(self):
-            # Отправляем число в файл
+            # отправка числа в файл
             data = {"number": self.current_number, "to": "receiver"}
             with open("agent_exchange.json", "w") as f:
                 json.dump(data, f)
             print(f"Агент 1 (SPADE) отправил число: {self.current_number}")
 
-            # Ждём ответа с рекомендацией
-            for _ in range(5):  # Пробуем 5 раз с интервалом 1 секунда
+            # ожидание ответа с рекомендацией
+            for _ in range(5):  # пробуем 5 раз с интервалом 1 секунда
                 try:
                     with open("agent_exchange.json", "r") as f:
                         reply = json.load(f)
@@ -45,7 +45,7 @@ class SenderAgent(Agent):
 async def main():
     agent = SenderAgent("sender@jabber.hot-chilli.net", "password")
     await agent.start()
-    await asyncio.sleep(30)  # Увеличиваем время работы до 30 секунд
+    await asyncio.sleep(30)  
     await agent.stop()
 
 if __name__ == "__main__":

@@ -14,7 +14,7 @@ user_proxy = UserProxyAgent(
     code_execution_config={"use_docker": False}
 )
 
-numbers = []  # Список для хранения всех чисел
+numbers = []  # список для хранения всех чисел
 
 def read_and_process():
     global numbers
@@ -24,10 +24,10 @@ def read_and_process():
                 data = json.load(f)
             if data.get("to") == "receiver" and "number" in data:
                 number = data["number"]
-                numbers.append(number)  # Сохраняем число
+                numbers.append(number)  # сохранение числа
                 average = sum(numbers) / len(numbers)
                 recommendation = "побольше" if average < 5 else "поменьше"
-                # Даём SenderAgent время прочитать файл перед перезаписью
+                # выдача времени для чтения файла перед перезаписью
                 time.sleep(0.5)
                 reply = {"to": "sender", "recommendation": recommendation}
                 with open("agent_exchange.json", "w") as f:
@@ -37,7 +37,7 @@ def read_and_process():
             pass
         time.sleep(2)
 
-# Запускаем обработку
+# запуск обработки
 if __name__ == "__main__":
     import threading
     threading.Thread(target=read_and_process, daemon=True).start()
